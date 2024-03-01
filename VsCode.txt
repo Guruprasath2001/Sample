@@ -1,0 +1,279 @@
+Vs Studio code 
+
+App.tsx
+
+import React from 'react';
+import TaskList from './components/TaskList';
+
+const App: React.FC = () => {
+  return (
+    <div>
+      <TaskList />
+    </div>
+  );
+};
+
+export default App;
+
+api.ts
+
+
+import axios from 'axios';
+
+import { Task } from '../models/Task';
+
+const API_BASE_URL = 'http://localhost:8080/api/tasks'; 
+
+
+
+
+export const createTask = (task: { title: string; description: string }) => axios.post(API_BASE_URL, task);
+
+
+export const completeTask = (id: number) => axios.get(`${API_BASE_URL}/${id}/complete`);
+
+export const incompleteTask = (id: number) => axios.get(`${API_BASE_URL}/${id}/incomplete`);
+
+export const getAllTasks = () => axios.get<Task[]>(API_BASE_URL);
+
+export const updateTask = (id: number, task: Task) => axios.put(`${API_BASE_URL}/${id}`, task);
+
+export const deleteTask = (id: number) => axios.delete(`${API_BASE_URL}/${id}`);
+
+
+Task.ts
+
+
+export interface Task {
+    id: number;
+    title: string;
+    description:string;
+    completed: boolean;
+  }
+  
+Tasklist.tsx
+
+import React, { useEffect, useState } from 'react';
+import { Task } from '../models/Task';
+import { getAllTasks, createTask, completeTask, incompleteTask, updateTask, deleteTask } from '../services/api';
+import './TaskList.css'; 
+
+const TaskList: React.FC = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState<{ title: string; description: string }>({ title: '', description: '' });
+
+  const fetchTasks = async () => {
+    try {
+      const response = await getAllTasks();
+      setTasks(response.data);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
+  const handleCreateTask = async () => {
+    try {
+      await createTask(newTask);
+      setNewTask({ title: '', description: '' });
+      fetchTasks();
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
+  };
+
+const handleCompleteTask = async (id: number) => {
+    try {
+      await completeTask(id);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error completing task:', error);
+    }
+  };
+
+  const handleIncompleteTask = async (id: number) => {
+    try {
+      await incompleteTask(id);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error marking task as incomplete:', error);
+    }
+  };
+
+  const handleUpdateTask = async (id: number, updatedTask: Task) => {
+    try {
+      await updateTask(id, updatedTask);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (id: number) => {
+    try {
+      await deleteTask(id);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []); 
+
+ 
+         
+
+  return (
+    <div className="task-list-container">
+      <h1><center> Todo List </center></h1>
+      <ul className="task-list">
+        {tasks.map((task) => (
+          <li key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}>
+            <div className="task-actions">
+              <input
+                type="checkbox"
+                checked={task.completed}
+                onChange={() => (task.completed ? handleIncompleteTask(task.id) : handleCompleteTask(task.id))}
+              />
+              <span style={{ textDecoration: task.completed ? 'line-through' : 'none' }}>{task.title}</span>
+              <button
+                onClick={() => {
+                  const newTitle = prompt('Enter new task title:', task.title);
+                  const newDescription = prompt('Enter new task description:', task.description);
+                  if (newTitle !== null && newDescription !== null) {
+                    handleUpdateTask(task.id, { ...task, title: newTitle, description: newDescription });
+                  }
+                }}
+              >
+                Edit
+              </button>
+              <button onClick={() => handleDeleteTask(task.id)}>Delete</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="new-task-container">
+        <input
+          type="text"
+          placeholder="Task Title"
+          value={newTask.title}
+          onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+        />
+        <textarea
+          placeholder="Task Description"
+          value={newTask.description}
+          onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+        />
+        <button onClick={handleCreateTask}>Add Task</button>
+      </div>
+    </div>
+  );
+};
+
+export default TaskList;
+
+Tasklist.css
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-list-container {
+  max-width: 600px;
+  width: 80%;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  text-align: center; 
+}
+
+.task-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.task-item {
+  border: 1px solid #ddd;
+  margin: 10px 0;
+  padding: 15px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+}
+
+.task-item.completed {
+  background-color: #f0f0f0;
+}
+
+.task-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.task-actions button {
+  background-color: #4caf50;
+  color: #fff;
+  padding: 8px 12px;
+  border: none;
+  margin-left: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.task-actions button:hover {
+  background-color: #45a049;
+}
+
+.checkbox-container {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-container input {
+  margin-right: 8px;
+  border: none;
+}
+
+.new-task-container {
+  margin-top: 20px;
+  text-align: center; 
+}
+
+.new-task-container input,
+.new-task-container textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.new-task-container button {
+  background-color: #2196f3;
+  color: #fff;
+  padding: 12px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.new-task-container button:hover {
+  background-color: #0b7dda;
+}
